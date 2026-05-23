@@ -1,0 +1,23 @@
+# ─────────────────────────────────────────────────────────────
+# Password Strength Analyzer – Python Dependencies
+# Install with:  pip install -r requirements.txt
+# ─────────────────────────────────────────────────────────────
+
+# Web framework
+Flask>=2.3,<4.0
+
+# Cross-Origin Resource Sharing support (lets a browser frontend call the API)
+# Install: pip install flask-cors
+# If unavailable in your environment, remove this line and the
+# CORS(...) call in app.py – the API will still work for same-origin clients.
+# flask-cors>=4.0
+
+# Environment variable loader (.env file support)
+python-dotenv>=1.0
+
+# ── Note on password hashing ──────────────────────────────────
+# We use Python's built-in hashlib.pbkdf2_hmac (PBKDF2-HMAC-SHA256)
+# which requires NO extra packages.  If you prefer bcrypt, install:
+#   bcrypt>=4.0
+# and swap in the bcrypt implementation shown in the README.
+# ─────────────────────────────────────────────────────────────
