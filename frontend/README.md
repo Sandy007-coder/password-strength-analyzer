@@ -145,6 +145,4 @@ Shows saved record cards with score bars, entropy, and timestamps. Includes a tw
 
 ---
 
-## 📄 License
 
-MIT — built as a cybersecurity portfolio demonstration.
