@@ -26,9 +26,5 @@ COMMON_PASSWORDS: set[str] = {
 
 
 def is_common_password(password: str) -> bool:
-    """
-    Return True if the given password appears in the common-passwords list.
-    The comparison is case-insensitive so 'Password' is treated the same
-    as 'password'.
-    """
+
     return password.lower() in COMMON_PASSWORDS

@@ -3,29 +3,22 @@ from config import Config
 from services.entropy_calculator import calculate_entropy
 from utils.common_passwords import is_common_password
 
-
-#  Scoring weights 
-# Each rule contributes a fixed number of points to the total score.
-# Max possible score = 10.
 SCORE_MAP = {
-    "min_length":         1,   # at least 8 characters
-    "good_length":        1,   # at least 12 characters
-    "extra_length":       1,   # at least 16 characters
-    "uppercase":          1,   # at least one A–Z
-    "lowercase":          1,   # at least one a–z
-    "numbers":            1,   # at least one 0–9
-    "special_characters": 1,   # at least one symbol
-    "no_common":          1,   # not in common-password list
-    "high_entropy":       1,   # entropy ≥ 60 bits
-    "very_high_entropy":  1,   # entropy ≥ 80 bits
+    "min_length":         1,   
+    "good_length":        1,   
+    "extra_length":       1,   
+    "uppercase":          1,   
+    "lowercase":          1,   
+    "numbers":            1,   
+    "special_characters": 1,   
+    "no_common":          1,  
+    "high_entropy":       1,   
+    "very_high_entropy":  1,   
 }
 
 
 def _check_rules(password: str) -> dict:
-    """
-    Run every individual rule and return a dict of booleans.
-    True = the password satisfies that rule.
-    """
+ 
     length  = len(password)
     entropy = calculate_entropy(password)
 
@@ -50,24 +43,20 @@ def _check_rules(password: str) -> dict:
 
 
 def _calculate_score(rules: dict) -> int:
-    """Sum up the score based on which rules passed."""
+    
     return sum(SCORE_MAP[rule] for rule, passed in rules.items() if passed)
 
 
 def _strength_label(score: int) -> str:
-    """Map a numeric score to a human-readable strength label."""
+   
     for low, high, label in Config.SCORE_BANDS:
         if low <= score <= high:
             return label
-    return "Very Strong"   # score > 8 fallback
+    return "Very Strong"  
 
 
 def _build_suggestions(password: str, rules: dict) -> list[str]:
-    """
-    Return a list of actionable improvement suggestions.
-    Only suggestions for *failed* rules are included.
-    If the password is already great, the list is empty.
-    """
+
     suggestions = []
 
     if is_common_password(password):
@@ -75,7 +64,7 @@ def _build_suggestions(password: str, rules: dict) -> list[str]:
             "This password appears in common password lists and can be cracked instantly. "
             "Choose something completely different."
         )
-        # If it's common, most other suggestions are moot – return early.
+       
         return suggestions
 
     if not rules["min_length"]:
@@ -109,30 +98,14 @@ def _build_suggestions(password: str, rules: dict) -> list[str]:
 
 
 def analyse_password(password: str) -> dict:
-    """
-    Run the full analysis pipeline and return a structured result.
 
-    Parameters
-    ----------
-    password : str
-        The raw (un-hashed) password to analyse.
-
-    Returns
-    -------
-    dict with keys:
-        strength    – "Weak" | "Medium" | "Strong" | "Very Strong"
-        score       – integer 0–10
-        entropy     – float (bits)
-        checks      – dict of individual rule results (booleans)
-        suggestions – list of improvement strings (empty if strong)
-    """
     rules       = _check_rules(password)
     score       = _calculate_score(rules)
     entropy     = calculate_entropy(password)
     strength    = _strength_label(score)
     suggestions = _build_suggestions(password, rules)
 
-    # Public-facing checks (subset of internal rules, matching API spec)
+    
     public_checks = {
         "length":            rules["min_length"],
         "uppercase":         rules["uppercase"],

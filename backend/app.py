@@ -4,23 +4,16 @@ from config                 import Config
 from database.db            import init_db
 from routes.password_routes import password_bp
 
-
-#  Create Flask app 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = Config.SECRET_KEY
 app.config["DEBUG"]      = Config.DEBUG
 
-
-#  CORS 
-# Try to use flask-cors for proper CORS headers.
-# If it is not installed we fall back to a minimal manual approach that works
-# for GET/POST/DELETE from any origin in development.
 try:
     from flask_cors import CORS
     CORS(app, resources={r"/*": {"origins": "*"}})
     _cors_mode = "flask-cors"
 except ImportError:
-    # Minimal CORS fallback – adds headers on every response
+    
     @app.after_request
     def _add_cors_headers(response):
         response.headers["Access-Control-Allow-Origin"]  = "*"
@@ -37,14 +30,13 @@ except ImportError:
 
 
 #  Database 
-init_db()   # Creates database/passwords.db and the table on first run
+init_db()   
 
 
 #  Blueprints 
 app.register_blueprint(password_bp)
 
 #  Home Route 
-
 @app.route("/")
 def home():
     return jsonify({
@@ -54,7 +46,6 @@ def home():
 
 
 #  Global error handlers 
-
 @app.errorhandler(404)
 def not_found(error):
     return jsonify({"success": False, "error": "Endpoint not found."}), 404
@@ -71,7 +62,6 @@ def internal_error(error):
 
 
 #  Entry point 
-
 if __name__ == "__main__":
     print(f"""
 ╔══════════════════════════════════════════════╗
