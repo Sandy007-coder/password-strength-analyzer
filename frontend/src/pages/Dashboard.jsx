@@ -1,227 +1,412 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { RiSaveLine } from 'react-icons/ri'
 
-// pages/Dashboard.jsx  –  Main analysis page
+import {
+  analyzePassword,
+  savePassword,
+  getPasswordHistory,
+  clearHistory,
+} from '../services/api'
 
+import PasswordInput from '../components/PasswordInput'
+import StrengthMeter from '../components/StrengthMeter'
+import PasswordChecklist from '../components/PasswordChecklist'
+import SuggestionsPanel from '../components/SuggestionsPanel'
+import PasswordHistory from '../components/PasswordHistory'
+import { DotsLoader } from '../components/Loader'
 
-import { useState, useCallback, useEffect, useRef } from 'react'
-import { RiSaveLine, RiFlashlightLine } from 'react-icons/ri'
-import { analyzePassword, savePassword, getPasswordHistory, clearHistory } from '../services/api'
-import PasswordInput      from '../components/PasswordInput'
-import StrengthMeter      from '../components/StrengthMeter'
-import PasswordChecklist  from '../components/PasswordChecklist'
-import SuggestionsPanel   from '../components/SuggestionsPanel'
-import PasswordHistory    from '../components/PasswordHistory'
-import { DotsLoader }     from '../components/Loader'
+const TOAST_TIMEOUT_MS = 3800
 
-// ── Toast notification system ────────────────────────────────────────────────
-let toastId = 0
-function useToasts() {
-  const [toasts, setToasts] = useState([])
-  const add = useCallback((message, type = 'info') => {
-    const id = ++toastId
-    setToasts(p => [...p, { id, message, type }])
-    setTimeout(() => setToasts(p => p.filter(t => t.id !== id)), 3800)
-  }, [])
-  return { toasts, add }
+const STRENGTH_COLORS = {
+  Weak: '#ff2d55',
+  Medium: '#ffd60a',
+  Strong: '#00b4ff',
+  'Very Strong': '#00ffa3',
 }
 
-function Toast({ message, type }) {
-  const colors = {
-    success: { bg: 'rgba(0,255,163,0.12)', border: 'rgba(0,255,163,0.35)', color: '#00ffa3' },
-    error:   { bg: 'rgba(255,45,85,0.12)',  border: 'rgba(255,45,85,0.35)',  color: '#ff2d55' },
-    info:    { bg: 'rgba(0,180,255,0.12)',  border: 'rgba(0,180,255,0.35)',  color: '#00b4ff' },
-    warn:    { bg: 'rgba(255,214,10,0.12)', border: 'rgba(255,214,10,0.35)', color: '#ffd60a' },
-  }[type] ?? colors.info
+const TOAST_STYLES = {
+  success: {
+    background: 'rgba(0,255,163,0.12)',
+    border: 'rgba(0,255,163,0.35)',
+    color: '#00ffa3',
+    icon: '✓',
+  },
+  error: {
+    background: 'rgba(255,45,85,0.12)',
+    border: 'rgba(255,45,85,0.35)',
+    color: '#ff2d55',
+    icon: '✗',
+  },
+  warn: {
+    background: 'rgba(255,214,10,0.12)',
+    border: 'rgba(255,214,10,0.35)',
+    color: '#ffd60a',
+    icon: '⚠',
+  },
+  info: {
+    background: 'rgba(0,180,255,0.12)',
+    border: 'rgba(0,180,255,0.35)',
+    color: '#00b4ff',
+    icon: 'ℹ',
+  },
+}
+
+let nextToastId = 0
+
+function useToastNotifications() {
+  const [notifications, setNotifications] = useState([])
+
+  const pushToast = useCallback((message, type = 'info') => {
+    const id = ++nextToastId
+
+    setNotifications((current) => [
+      ...current,
+      { id, message, type },
+    ])
+
+    window.setTimeout(() => {
+      setNotifications((current) =>
+        current.filter((toast) => toast.id !== id)
+      )
+    }, TOAST_TIMEOUT_MS)
+  }, [])
+
+  return {
+    notifications,
+    pushToast,
+  }
+}
+
+function ToastNotification({ message, type }) {
+  const style = TOAST_STYLES[type] ?? TOAST_STYLES.info
 
   return (
-    <div className="toast-in flex items-start gap-3 px-4 py-3 rounded-lg max-w-sm shadow-2xl"
-      style={{ background: colors.bg, border: `1px solid ${colors.border}` }}>
-      <span className="font-mono text-lg leading-none" style={{ color: colors.color }}>
-        {type === 'success' ? '✓' : type === 'error' ? '✗' : type === 'warn' ? '⚠' : 'ℹ'}
+    <div
+      className="toast-in flex items-start gap-3 px-4 py-3 rounded-lg max-w-sm shadow-2xl"
+      style={{
+        background: style.background,
+        border: `1px solid ${style.border}`,
+      }}
+    >
+      <span
+        className="font-mono text-lg leading-none"
+        style={{ color: style.color }}
+      >
+        {style.icon}
       </span>
-      <p className="text-sm" style={{ color: 'var(--text-primary)' }}>{message}</p>
+
+      <p
+        className="text-sm"
+        style={{ color: 'var(--text-primary)' }}
+      >
+        {message}
+      </p>
     </div>
   )
 }
 
-// ── Stats bar ─────────────────────────────────────────────────────────────────
-function StatBadge({ label, value, color }) {
+function StatCard({ label, value, color }) {
   return (
-    <div className="px-4 py-3 rounded-lg" style={{ background: 'rgba(0,180,255,0.04)', border: '1px solid rgba(0,180,255,0.1)' }}>
-      <p className="font-mono text-xs mb-1" style={{ color: 'var(--text-dim)' }}>{label}</p>
-      <p className="font-display text-lg font-bold" style={{ color: color ?? 'var(--accent-cyan)', textShadow: `0 0 12px ${color ?? 'var(--accent-cyan)'}` }}>
+    <div
+      className="px-4 py-3 rounded-lg"
+      style={{
+        background: 'rgba(0,180,255,0.04)',
+        border: '1px solid rgba(0,180,255,0.1)',
+      }}
+    >
+      <p
+        className="font-mono text-xs mb-1"
+        style={{ color: 'var(--text-dim)' }}
+      >
+        {label}
+      </p>
+
+      <p
+        className="font-display text-lg font-bold"
+        style={{
+          color: color ?? 'var(--accent-cyan)',
+          textShadow: `0 0 12px ${color ?? 'var(--accent-cyan)'}`,
+        }}
+      >
         {value}
       </p>
     </div>
   )
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 export default function Dashboard() {
-  const [password,      setPassword]      = useState('')
-  const [result,        setResult]        = useState(null)
-  const [analysing,     setAnalysing]     = useState(false)
-  const [saving,        setSaving]        = useState(false)
-  const [history,       setHistory]       = useState([])
-  const [histLoading,   setHistLoading]   = useState(false)
-  const debounceRef = useRef(null)
-  const { toasts, add: addToast } = useToasts()
+  const [password, setPassword] = useState('')
+  const [analysisResult, setAnalysisResult] = useState(null)
 
-  // ── Debounced real-time analysis ──────────────────────────────────────────
-  useEffect(() => {
-    if (!password) { setResult(null); return }
-    clearTimeout(debounceRef.current)
-    debounceRef.current = setTimeout(async () => {
-      setAnalysing(true)
-      try {
-        const data = await analyzePassword(password)
-        setResult(data)
-      } catch (err) {
-        addToast(err.friendlyMessage ?? 'Analysis failed — is the backend running?', 'error')
-      } finally { setAnalysing(false) }
-    }, 380)
-    return () => clearTimeout(debounceRef.current)
-  }, [password])
+  const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
 
-  // ── Fetch history on mount ────────────────────────────────────────────────
-  const fetchHistory = useCallback(async () => {
-    setHistLoading(true)
+  const [history, setHistory] = useState([])
+  const [isHistoryLoading, setIsHistoryLoading] = useState(false)
+
+  const analysisTimerRef = useRef(null)
+
+  const {
+    notifications,
+    pushToast,
+  } = useToastNotifications()
+
+  const loadHistory = useCallback(async () => {
+    setIsHistoryLoading(true)
+
     try {
-      const d = await getPasswordHistory()
-      setHistory(d.history ?? [])
-    } catch { /* silent */ }
-    finally { setHistLoading(false) }
+      const response = await getPasswordHistory()
+      setHistory(response.history ?? [])
+    } catch {
+      // History retrieval failures should not block page usage.
+    } finally {
+      setIsHistoryLoading(false)
+    }
   }, [])
 
-  useEffect(() => { fetchHistory() }, [fetchHistory])
+  useEffect(() => {
+    loadHistory()
+  }, [loadHistory])
 
-  // ── Save password ──────────────────────────────────────────────────────────
-  const handleSave = async () => {
-    if (!password) { addToast('Enter a password first.', 'warn'); return }
-    setSaving(true)
+  useEffect(() => {
+    if (!password) {
+      setAnalysisResult(null)
+      return
+    }
+
+    clearTimeout(analysisTimerRef.current)
+
+    analysisTimerRef.current = setTimeout(async () => {
+      setIsAnalyzing(true)
+
+      try {
+        const response = await analyzePassword(password)
+        setAnalysisResult(response)
+      } catch (error) {
+        pushToast(
+          error.friendlyMessage ??
+            'Analysis failed — is the backend running?',
+          'error'
+        )
+      } finally {
+        setIsAnalyzing(false)
+      }
+    }, 380)
+
+    return () => clearTimeout(analysisTimerRef.current)
+  }, [password, pushToast])
+
+  const handleSavePassword = useCallback(async () => {
+    if (!password) {
+      pushToast('Enter a password first.', 'warn')
+      return
+    }
+
+    setIsSaving(true)
+
     try {
       await savePassword(password)
-      addToast('Password saved securely.', 'success')
-      fetchHistory()
-    } catch (err) {
-      const msg = err.response?.status === 409
-        ? 'This password is already saved — avoid reuse!'
-        : (err.friendlyMessage ?? 'Save failed.')
-      addToast(msg, err.response?.status === 409 ? 'warn' : 'error')
-    } finally { setSaving(false) }
-  }
 
-  // ── Clear history ──────────────────────────────────────────────────────────
-  const handleClear = async () => {
+      pushToast(
+        'Password saved securely.',
+        'success'
+      )
+
+      await loadHistory()
+    } catch (error) {
+      const isDuplicate = error.response?.status === 409
+
+      pushToast(
+        isDuplicate
+          ? 'This password is already saved — avoid reuse!'
+          : error.friendlyMessage ?? 'Save failed.',
+        isDuplicate ? 'warn' : 'error'
+      )
+    } finally {
+      setIsSaving(false)
+    }
+  }, [password, loadHistory, pushToast])
+
+  const handleClearHistory = useCallback(async () => {
     try {
       await clearHistory()
-      setHistory([])
-      addToast('History cleared.', 'info')
-    } catch { addToast('Clear failed.', 'error') }
-  }
 
-  // ── Derive strength color ─────────────────────────────────────────────────
-  const strengthColor = {
-    'Weak':        '#ff2d55', 'Medium': '#ffd60a',
-    'Strong':      '#00b4ff', 'Very Strong': '#00ffa3'
-  }[result?.strength] ?? 'var(--accent-cyan)'
+      setHistory([])
+
+      pushToast(
+        'History cleared.',
+        'info'
+      )
+    } catch {
+      pushToast(
+        'Clear failed.',
+        'error'
+      )
+    }
+  }, [pushToast])
+
+  const checksSummary = useMemo(() => {
+    if (!analysisResult?.checks) {
+      return null
+    }
+
+    const checkValues = Object.values(
+      analysisResult.checks
+    )
+
+    return {
+      passed: checkValues.filter(Boolean).length,
+      total: checkValues.length,
+      allPassed: checkValues.every(Boolean),
+    }
+  }, [analysisResult])
+
+  const strengthColor =
+    STRENGTH_COLORS[analysisResult?.strength] ??
+    'var(--accent-cyan)'
 
   return (
     <div className="min-h-screen grid-bg page-enter">
-      {/* Toast stack */}
       <div className="fixed bottom-6 right-6 z-50 space-y-3">
-        {toasts.map(t => <Toast key={t.id} message={t.message} type={t.type} />)}
+        {notifications.map((toast) => (
+          <ToastNotification
+            key={toast.id}
+            message={toast.message}
+            type={toast.type}
+          />
+        ))}
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-20">
-
-        {/* ── Page header ── */}
         <div className="mb-12 space-y-3 fade-up">
-          <p className="font-mono text-xs tracking-[0.3em]" style={{ color: 'var(--text-dim)' }}>
+          <p
+            className="font-mono text-xs tracking-[0.3em]"
+            style={{ color: 'var(--text-dim)' }}
+          >
             $ cipher-guard --analyze
           </p>
+
           <h1 className="font-display text-3xl sm:text-4xl lg:text-5xl font-bold glow-cyan text-cyan leading-none">
-            PASSWORD<br />
-            <span className="text-txt opacity-60">STRENGTH</span> ANALYZER
+            PASSWORD
+            <br />
+            <span className="text-txt opacity-60">
+              STRENGTH
+            </span>{' '}
+            ANALYZER
           </h1>
-          <p className="font-body text-base max-w-xl" style={{ color: 'var(--text-secondary)' }}>
-            Real-time entropy analysis · PBKDF2-SHA256 hashing · Pattern detection · History tracking
+
+          <p
+            className="font-body text-base max-w-xl"
+            style={{ color: 'var(--text-secondary)' }}
+          >
+            Real-time entropy analysis · PBKDF2-SHA256 hashing ·
+            Pattern detection · History tracking
           </p>
         </div>
 
-        {/* ── Stats bar (only when we have a result) ── */}
-        {result && (
+        {analysisResult && checksSummary && (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8 fade-up">
-            <StatBadge label="STRENGTH"  value={result.strength}  color={strengthColor} />
-            <StatBadge label="SCORE"     value={`${result.score}/${result.max_score}`} color={strengthColor} />
-            <StatBadge label="ENTROPY"   value={`${result.entropy}b`} />
-            <StatBadge label="CHECKS"    value={`${Object.values(result.checks).filter(Boolean).length}/${Object.values(result.checks).length}`}
-              color={Object.values(result.checks).every(Boolean) ? '#00ffa3' : 'var(--accent-cyan)'} />
+            <StatCard
+              label="STRENGTH"
+              value={analysisResult.strength}
+              color={strengthColor}
+            />
+
+            <StatCard
+              label="SCORE"
+              value={`${analysisResult.score}/${analysisResult.max_score}`}
+              color={strengthColor}
+            />
+
+            <StatCard
+              label="ENTROPY"
+              value={`${analysisResult.entropy}b`}
+            />
+
+            <StatCard
+              label="CHECKS"
+              value={`${checksSummary.passed}/${checksSummary.total}`}
+              color={
+                checksSummary.allPassed
+                  ? '#00ffa3'
+                  : 'var(--accent-cyan)'
+              }
+            />
           </div>
         )}
 
-        {/* ── Main grid ── */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-          {/* Left column – input + meter */}
           <div className="lg:col-span-2 space-y-6">
-
-            {/* Password input card */}
             <div className="glass-bright rounded-xl p-6 space-y-6 relative fade-up stagger-1">
               <PasswordInput
                 value={password}
                 onChange={setPassword}
-                strength={result?.strength}
-                suggestedPwd={result?.suggested_password}
-                onGenerate={() => {}} // new suggestion arrives with next analysis
-                isLoading={analysing}
+                strength={analysisResult?.strength}
+                suggestedPwd={analysisResult?.suggested_password}
+                onGenerate={() => {}}
+                isLoading={isAnalyzing}
               />
 
-              {/* Analyse indicator */}
-              {analysing && (
-                <div className="flex items-center gap-2 text-xs font-mono" style={{ color: 'var(--text-dim)' }}>
-                  <DotsLoader /> ANALYSING IN REAL-TIME…
+              {isAnalyzing && (
+                <div
+                  className="flex items-center gap-2 text-xs font-mono"
+                  style={{ color: 'var(--text-dim)' }}
+                >
+                  <DotsLoader />
+                  ANALYSING IN REAL-TIME…
                 </div>
               )}
 
-              {/* Save button */}
               <button
-                onClick={handleSave}
-                disabled={!password || saving || analysing}
-                className="btn-primary w-full flex items-center justify-center gap-2 py-3.5 rounded text-xs
-                  disabled:opacity-30 disabled:cursor-not-allowed">
-                {saving
-                  ? <><DotsLoader color="var(--accent-cyan)" /> SAVING…</>
-                  : <><RiSaveLine className="text-base" /> SAVE PASSWORD (HASHED + SECURE)</>}
+                onClick={handleSavePassword}
+                disabled={
+                  !password ||
+                  isSaving ||
+                  isAnalyzing
+                }
+                className="btn-primary w-full flex items-center justify-center gap-2 py-3.5 rounded text-xs disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                {isSaving ? (
+                  <>
+                    <DotsLoader color="var(--accent-cyan)" />
+                    SAVING…
+                  </>
+                ) : (
+                  <>
+                    <RiSaveLine className="text-base" />
+                    SAVE PASSWORD (HASHED + SECURE)
+                  </>
+                )}
               </button>
             </div>
 
-            {/* Strength meter */}
             <div className="fade-up stagger-2">
-              <StrengthMeter result={result} />
+              <StrengthMeter result={analysisResult} />
             </div>
 
-            {/* Checklist */}
-            {result?.checks && (
+            {analysisResult?.checks && (
               <div className="fade-up stagger-3">
-                <PasswordChecklist checks={result.checks} />
+                <PasswordChecklist
+                  checks={analysisResult.checks}
+                />
               </div>
             )}
 
-            {/* Suggestions */}
-            {result?.suggestions && (
+            {analysisResult?.suggestions && (
               <div className="fade-up stagger-4">
-                <SuggestionsPanel suggestions={result.suggestions} />
+                <SuggestionsPanel
+                  suggestions={analysisResult.suggestions}
+                />
               </div>
             )}
           </div>
 
-          {/* Right column – history */}
           <div className="fade-up stagger-3">
             <PasswordHistory
               history={history}
-              isLoading={histLoading}
-              onClear={handleClear}
-              onRefresh={fetchHistory}
+              isLoading={isHistoryLoading}
+              onClear={handleClearHistory}
+              onRefresh={loadHistory}
             />
           </div>
         </div>

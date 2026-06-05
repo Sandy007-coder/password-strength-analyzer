@@ -1,52 +1,69 @@
 import math
 import re
 
-def _character_pool_size(password: str) -> int:
-   
-    pool = 0
 
-    if re.search(r"[a-z]", password):
-        pool += 26          # a–z
+LOWERCASE_PATTERN = re.compile(r"[a-z]")
+UPPERCASE_PATTERN = re.compile(r"[A-Z]")
+DIGIT_PATTERN = re.compile(r"[0-9]")
+SPECIAL_CHARACTER_PATTERN = re.compile(
+    r"[!@#$%^&*()\-_=+\[\]{}|;:',.<>?/`~\"\\]"
+)
+NON_ASCII_PATTERN = re.compile(r"[^\x00-\x7F]")
 
-    if re.search(r"[A-Z]", password):
-        pool += 26          # A–Z
 
-    if re.search(r"[0-9]", password):
-        pool += 10          # 0–9
+def _estimate_character_pool(password: str) -> int:
+    """
+    Estimate the effective character pool used by the password.
+    """
+    pool_size = 0
 
-    if re.search(r"[!@#$%^&*()\-_=+\[\]{}|;:',.<>?/`~\"\\]", password):
-        pool += 32
+    if LOWERCASE_PATTERN.search(password):
+        pool_size += 26
 
-    if re.search(r"[^\x00-\x7F]", password):
-        pool += 64         
+    if UPPERCASE_PATTERN.search(password):
+        pool_size += 26
 
-    if pool == 0:
-        pool = 26
+    if DIGIT_PATTERN.search(password):
+        pool_size += 10
 
-    return pool
+    if SPECIAL_CHARACTER_PATTERN.search(password):
+        pool_size += 32
+
+    if NON_ASCII_PATTERN.search(password):
+        pool_size += 64
+
+    return pool_size or 26
 
 
 def calculate_entropy(password: str) -> float:
-
+    """
+    Calculate password entropy in bits.
+    """
     if not password:
         return 0.0
 
-    pool_size = _character_pool_size(password)
-    length    = len(password)
+    character_pool_size = _estimate_character_pool(password)
+    password_length = len(password)
 
-    entropy = length * math.log2(pool_size)
-    return round(entropy, 2)
+    entropy_bits = password_length * math.log2(character_pool_size)
+
+    return round(entropy_bits, 2)
 
 
 def entropy_label(entropy: float) -> str:
-   
+    """
+    Convert entropy value into a human-readable strength category.
+    """
     if entropy < 28:
         return "Very Weak"
-    elif entropy < 36:
+
+    if entropy < 36:
         return "Weak"
-    elif entropy < 60:
+
+    if entropy < 60:
         return "Reasonable"
-    elif entropy < 128:
+
+    if entropy < 128:
         return "Strong"
-    else:
-        return "Very Strong"
+
+    return "Very Strong"

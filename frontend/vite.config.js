@@ -1,15 +1,20 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
+const BACKEND_URL = 'http://127.0.0.1:5000'
+
 export default defineConfig({
   plugins: [react()],
+
   server: {
     port: 3000,
+
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:5000',
+        target: BACKEND_URL,
         changeOrigin: true,
-        rewrite: (p) => p.replace(/^\/api/, ''),
+
+        rewrite: (path) => path.replace(/^\/api/, ''),
       },
     },
   },

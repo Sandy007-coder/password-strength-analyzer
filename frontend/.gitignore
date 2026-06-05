@@ -1,20 +1,24 @@
-# Node.js Dependencies
+# Dependencies
 node_modules/
 
-# Production Build Folder
+# Build output
 dist/
 
-# Environment Variables
+# Environment configuration
 .env
+.env.local
+.env.*.local
 
 # Logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
 
-# VS Code Settings
+# IDE settings
 .vscode/
+.idea/
 
-# OS Generated Files
+# Operating system files
 .DS_Store
 Thumbs.db

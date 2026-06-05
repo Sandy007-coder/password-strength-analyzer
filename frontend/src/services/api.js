@@ -1,58 +1,72 @@
-
-// services/api.js  –  Axios API service layer
-
-// All HTTP communication with the Flask backend lives here.
-
-
 import axios from 'axios'
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:5000'
+const API_BASE_URL =
+  import.meta.env.VITE_API_URL || 'http://127.0.0.1:5000'
 
-const api = axios.create({
-  baseURL: BASE_URL,
+const httpClient = axios.create({
+  baseURL: API_BASE_URL,
   timeout: 12000,
-  headers: { 'Content-Type': 'application/json' },
+  headers: {
+    'Content-Type': 'application/json',
+  },
 })
 
-// Log outgoing requests in dev
-api.interceptors.request.use((cfg) => {
-  if (import.meta.env.DEV) console.debug(`[API] ${cfg.method?.toUpperCase()} ${cfg.url}`)
-  return cfg
+httpClient.interceptors.request.use((config) => {
+  if (import.meta.env.DEV) {
+    const method = config.method?.toUpperCase() || 'REQUEST'
+    console.debug(`[API] ${method} ${config.url}`)
+  }
+
+  return config
 })
 
-// Normalise errors into a friendlyMessage field
-api.interceptors.response.use(
-  (r) => r,
-  (err) => {
-    err.friendlyMessage =
-      err.response?.data?.error ||
-      err.response?.data?.message ||
-      err.message ||
+httpClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    error.friendlyMessage =
+      error.response?.data?.error ||
+      error.response?.data?.message ||
+      error.message ||
       'An unexpected error occurred.'
-    return Promise.reject(err)
+
+    return Promise.reject(error)
   },
 )
 
-//  API functions 
+const extractResponseData = (response) => response.data
 
-/** POST /analyze-password  –  analyse without saving */
-export const analyzePassword = (password) =>
-  api.post('/analyze-password', { password }).then((r) => r.data)
+export const analyzePassword = async (password) => {
+  const response = await httpClient.post('/analyze-password', {
+    password,
+  })
 
-/** POST /save-password  –  analyse + persist (409 on reuse) */
-export const savePassword = (password) =>
-  api.post('/save-password', { password }).then((r) => r.data)
+  return extractResponseData(response)
+}
 
-/** GET /password-history  –  fetch all saved records */
-export const getPasswordHistory = () =>
-  api.get('/password-history').then((r) => r.data)
+export const savePassword = async (password) => {
+  const response = await httpClient.post('/save-password', {
+    password,
+  })
 
-/** DELETE /clear-history  –  wipe all records */
-export const clearHistory = () =>
-  api.delete('/clear-history').then((r) => r.data)
+  return extractResponseData(response)
+}
 
-/** GET /health  –  liveness probe */
-export const healthCheck = () =>
-  api.get('/health').then((r) => r.data)
+export const getPasswordHistory = async () => {
+  const response = await httpClient.get('/password-history')
 
-export default api
+  return extractResponseData(response)
+}
+
+export const clearHistory = async () => {
+  const response = await httpClient.delete('/clear-history')
+
+  return extractResponseData(response)
+}
+
+export const healthCheck = async () => {
+  const response = await httpClient.get('/health')
+
+  return extractResponseData(response)
+}
+
+export default httpClient

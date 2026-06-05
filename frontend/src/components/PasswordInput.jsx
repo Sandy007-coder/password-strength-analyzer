@@ -1,101 +1,184 @@
+import { useCallback, useRef, useState } from 'react'
+import {
+  RiCheckLine,
+  RiDeleteBackLine,
+  RiEyeLine,
+  RiEyeOffLine,
+  RiFileCopyLine,
+  RiRefreshLine,
+} from 'react-icons/ri'
 
-// PasswordInput.jsx  –  Main password entry widget
-
-
-import { useState, useRef, useCallback } from 'react'
-import { RiEyeLine, RiEyeOffLine, RiFileCopyLine, RiCheckLine, RiRefreshLine, RiDeleteBackLine } from 'react-icons/ri'
-
-// Input border color depends on strength
-const BORDER_BY_STRENGTH = {
-  'Weak':        'rgba(255,45,85,0.6)',
-  'Medium':      'rgba(255,214,10,0.6)',
-  'Strong':      'rgba(0,180,255,0.6)',
+const INPUT_BORDER_COLORS = {
+  Weak: 'rgba(255,45,85,0.6)',
+  Medium: 'rgba(255,214,10,0.6)',
+  Strong: 'rgba(0,180,255,0.6)',
   'Very Strong': 'rgba(0,255,163,0.6)',
 }
-const SHADOW_BY_STRENGTH = {
-  'Weak':        '0 0 20px rgba(255,45,85,0.1)',
-  'Medium':      '0 0 20px rgba(255,214,10,0.1)',
-  'Strong':      '0 0 20px rgba(0,180,255,0.1)',
+
+const INPUT_SHADOWS = {
+  Weak: '0 0 20px rgba(255,45,85,0.1)',
+  Medium: '0 0 20px rgba(255,214,10,0.1)',
+  Strong: '0 0 20px rgba(0,180,255,0.1)',
   'Very Strong': '0 0 20px rgba(0,255,163,0.15)',
 }
 
-export default function PasswordInput({ value, onChange, strength, suggestedPwd, onGenerate, isLoading }) {
-  const [visible, setVisible] = useState(false)
-  const [copied,  setCopied]  = useState(false)
-  const inputRef = useRef(null)
+const DEFAULT_BORDER_COLOR = 'rgba(0,180,255,0.18)'
+const COPY_FEEDBACK_DURATION_MS = 2000
 
-  const borderColor = strength ? (BORDER_BY_STRENGTH[strength] ?? 'rgba(0,180,255,0.18)') : 'rgba(0,180,255,0.18)'
-  const shadowColor = strength ? (SHADOW_BY_STRENGTH[strength] ?? 'none') : 'none'
+export default function PasswordInput({
+  value,
+  onChange,
+  strength,
+  suggestedPwd,
+  onGenerate,
+  isLoading,
+}) {
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false)
+  const [hasCopied, setHasCopied] = useState(false)
 
-  const handleCopy = useCallback(async () => {
-    if (!value) return
-    try { await navigator.clipboard.writeText(value) } catch { /* fallback */ }
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+  const passwordInputRef = useRef(null)
+
+  const borderColor =
+    INPUT_BORDER_COLORS[strength] ?? DEFAULT_BORDER_COLOR
+
+  const boxShadow =
+    strength && INPUT_SHADOWS[strength]
+      ? INPUT_SHADOWS[strength]
+      : 'none'
+
+  const characterCountColor =
+    value.length >= 16
+      ? 'var(--green-bright)'
+      : value.length >= 8
+        ? 'var(--accent-cyan)'
+        : 'var(--text-dim)'
+
+  const handleCopyToClipboard = useCallback(async () => {
+    if (!value) {
+      return
+    }
+
+    try {
+      await navigator.clipboard.writeText(value)
+    } catch {
+      // Clipboard access may be unavailable in some browsers/contexts.
+    }
+
+    setHasCopied(true)
+
+    setTimeout(() => {
+      setHasCopied(false)
+    }, COPY_FEEDBACK_DURATION_MS)
   }, [value])
 
-  const handleGenerate = () => {
-    if (suggestedPwd) onChange(suggestedPwd)
+  const handleGeneratePassword = () => {
+    if (suggestedPwd) {
+      onChange(suggestedPwd)
+    }
+
     onGenerate?.()
+  }
+
+  const handleClearInput = () => {
+    onChange('')
+    passwordInputRef.current?.focus()
   }
 
   return (
     <div className="space-y-4">
-      {/* Label row */}
       <div className="flex items-center justify-between">
-        <label className="font-display text-xs tracking-[0.2em] text-txt-dim uppercase">
+        <label className="font-display text-xs uppercase tracking-[0.2em] text-txt-dim">
           // PASSWORD INPUT
         </label>
-        <span className="font-mono text-xs" style={{
-          color: value.length >= 16 ? 'var(--green-bright)' : value.length >= 8 ? 'var(--accent-cyan)' : 'var(--text-dim)'
-        }}>
-          {value.length.toString().padStart(3,'0')} CHARS
+
+        <span
+          className="font-mono text-xs"
+          style={{ color: characterCountColor }}
+        >
+          {value.length.toString().padStart(3, '0')} CHARS
         </span>
       </div>
 
-      {/* Input container with corner decorations */}
       <div className="relative">
-        {/* Corner decorations */}
-        <span className="corner-tl" /><span className="corner-tr" />
-        <span className="corner-bl" /><span className="corner-br" />
+        <span className="corner-tl" />
+        <span className="corner-tr" />
+        <span className="corner-bl" />
+        <span className="corner-br" />
 
-        {/* The input + action buttons */}
-        <div className="flex items-center rounded" style={{
-          border: `1px solid ${borderColor}`,
-          boxShadow: shadowColor,
-          transition: 'border-color 0.4s, box-shadow 0.4s',
-          background: 'rgba(2,6,15,0.8)',
-        }}>
+        <div
+          className="flex items-center rounded"
+          style={{
+            border: `1px solid ${borderColor}`,
+            boxShadow,
+            transition: 'border-color 0.4s, box-shadow 0.4s',
+            background: 'rgba(2,6,15,0.8)',
+          }}
+        >
           <input
-            ref={inputRef}
-            type={visible ? 'text' : 'password'}
+            ref={passwordInputRef}
+            type={isPasswordVisible ? 'text' : 'password'}
             value={value}
-            onChange={e => onChange(e.target.value)}
+            onChange={(event) => onChange(event.target.value)}
             placeholder="enter passphrase or generate..."
-            className="cyber-input rounded px-4 py-4 flex-1 text-sm border-none"
             autoComplete="new-password"
             spellCheck={false}
+            className="cyber-input flex-1 rounded border-none px-4 py-4 text-sm"
           />
 
-          {/* Action strip */}
-          <div className="flex items-center gap-1 px-2 border-l" style={{ borderColor: 'rgba(0,180,255,0.1)' }}>
-            {/* Toggle visibility */}
-            <button onClick={() => setVisible(v => !v)} title={visible ? 'Hide' : 'Show'}
-              className="p-2 rounded transition-all duration-200 text-txt-dim hover:text-cyan hover:bg-cyan/5">
-              {visible ? <RiEyeOffLine className="text-base" /> : <RiEyeLine className="text-base" />}
+          <div
+            className="flex items-center gap-1 border-l px-2"
+            style={{
+              borderColor: 'rgba(0,180,255,0.1)',
+            }}
+          >
+            <button
+              type="button"
+              onClick={() =>
+                setIsPasswordVisible((current) => !current)
+              }
+              title={isPasswordVisible ? 'Hide' : 'Show'}
+              aria-label={
+                isPasswordVisible
+                  ? 'Hide password'
+                  : 'Show password'
+              }
+              className="rounded p-2 text-txt-dim transition-all duration-200 hover:bg-cyan/5 hover:text-cyan"
+            >
+              {isPasswordVisible ? (
+                <RiEyeOffLine className="text-base" />
+              ) : (
+                <RiEyeLine className="text-base" />
+              )}
             </button>
 
-            {/* Copy */}
-            <button onClick={handleCopy} disabled={!value} title="Copy"
-              className="p-2 rounded transition-all duration-200 disabled:opacity-20"
-              style={{ color: copied ? 'var(--green-bright)' : 'var(--text-secondary)' }}>
-              {copied ? <RiCheckLine className="text-base" /> : <RiFileCopyLine className="text-base" />}
+            <button
+              type="button"
+              onClick={handleCopyToClipboard}
+              disabled={!value}
+              title="Copy"
+              aria-label="Copy password"
+              className="rounded p-2 transition-all duration-200 disabled:opacity-20"
+              style={{
+                color: hasCopied
+                  ? 'var(--green-bright)'
+                  : 'var(--text-secondary)',
+              }}
+            >
+              {hasCopied ? (
+                <RiCheckLine className="text-base" />
+              ) : (
+                <RiFileCopyLine className="text-base" />
+              )}
             </button>
 
-            {/* Clear */}
             {value && (
-              <button onClick={() => { onChange(''); inputRef.current?.focus() }} title="Clear"
-                className="p-2 rounded transition-all duration-200 text-txt-dim hover:text-red-neo hover:bg-red-neo/5">
+              <button
+                type="button"
+                onClick={handleClearInput}
+                title="Clear"
+                aria-label="Clear password"
+                className="rounded p-2 text-txt-dim transition-all duration-200 hover:bg-red-neo/5 hover:text-red-neo"
+              >
                 <RiDeleteBackLine className="text-base" />
               </button>
             )}
@@ -103,17 +186,32 @@ export default function PasswordInput({ value, onChange, strength, suggestedPwd,
         </div>
       </div>
 
-      {/* Generate button */}
-      <button onClick={handleGenerate} disabled={isLoading}
-        className="btn-primary w-full flex items-center justify-center gap-3 py-3.5 rounded text-xs
-          disabled:opacity-40 disabled:cursor-not-allowed">
-        <RiRefreshLine className={`text-base ${isLoading ? 'animate-spin' : ''}`} />
-        {isLoading ? 'GENERATING SECURE PASSWORD...' : 'GENERATE STRONG PASSWORD'}
+      <button
+        type="button"
+        onClick={handleGeneratePassword}
+        disabled={isLoading}
+        className="
+          btn-primary flex w-full items-center justify-center
+          gap-3 rounded py-3.5 text-xs
+          disabled:cursor-not-allowed disabled:opacity-40
+        "
+      >
+        <RiRefreshLine
+          className={`text-base ${
+            isLoading ? 'animate-spin' : ''
+          }`}
+        />
+
+        {isLoading
+          ? 'GENERATING SECURE PASSWORD...'
+          : 'GENERATE STRONG PASSWORD'}
       </button>
 
-      {/* Copy confirmation */}
-      {copied && (
-        <p className="text-center font-mono text-xs glow-green" style={{ color: 'var(--green-bright)' }}>
+      {hasCopied && (
+        <p
+          className="glow-green text-center font-mono text-xs"
+          style={{ color: 'var(--green-bright)' }}
+        >
           ✓ COPIED TO CLIPBOARD
         </p>
       )}

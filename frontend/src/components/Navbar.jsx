@@ -1,119 +1,300 @@
-
-// Navbar.jsx  –  Fixed top navigation with live API status indicator
-
-
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { RiShieldKeyholeLine, RiDashboardLine, RiHistoryLine, RiInformationLine, RiMenuLine, RiCloseLine, RiWifiLine, RiWifiOffLine } from 'react-icons/ri'
+import {
+  RiCloseLine,
+  RiDashboardLine,
+  RiHistoryLine,
+  RiInformationLine,
+  RiMenuLine,
+  RiShieldKeyholeLine,
+} from 'react-icons/ri'
+
 import { healthCheck } from '../services/api'
 
-const LINKS = [
-  { to: '/',        label: 'DASHBOARD', Icon: RiDashboardLine   },
-  { to: '/history', label: 'HISTORY',   Icon: RiHistoryLine     },
-  { to: '/about',   label: 'ABOUT',     Icon: RiInformationLine },
+const NAVIGATION_ITEMS = [
+  {
+    to: '/',
+    label: 'DASHBOARD',
+    Icon: RiDashboardLine,
+  },
+  {
+    to: '/history',
+    label: 'HISTORY',
+    Icon: RiHistoryLine,
+  },
+  {
+    to: '/about',
+    label: 'ABOUT',
+    Icon: RiInformationLine,
+  },
 ]
 
+const API_STATUS = {
+  ONLINE: 'online',
+  OFFLINE: 'offline',
+  CHECKING: 'checking',
+}
+
+const STATUS_INDICATOR_CLASSES = {
+  [API_STATUS.ONLINE]: 'bg-green-neo shadow-neon-green',
+  [API_STATUS.OFFLINE]: 'bg-red-neo shadow-neon-red',
+  [API_STATUS.CHECKING]: 'bg-yellow-neo animate-pulse',
+}
+
+const STATUS_LABELS = {
+  [API_STATUS.ONLINE]: 'API ONLINE',
+  [API_STATUS.OFFLINE]: 'API OFFLINE',
+  [API_STATUS.CHECKING]: 'CHECKING',
+}
+
+const NAVBAR_STYLES = {
+  background: 'rgba(2,6,15,0.92)',
+  backdropFilter: 'blur(20px)',
+  borderBottom: '1px solid rgba(0,180,255,0.12)',
+}
+
+const MOBILE_MENU_STYLES = {
+  background: 'rgba(2,6,15,0.98)',
+  borderBottom: '1px solid rgba(0,180,255,0.1)',
+}
+
+const STATUS_BADGE_STYLES = {
+  background: 'rgba(0,180,255,0.05)',
+  border: '1px solid rgba(0,180,255,0.1)',
+}
+
+const ACTIVE_LINK_STYLES = {
+  background: 'rgba(0,180,255,0.07)',
+  border: '1px solid rgba(0,180,255,0.2)',
+}
+
+const ACTIVE_LINK_UNDERLINE_STYLES = {
+  background: 'var(--accent-cyan)',
+  boxShadow: '0 0 8px var(--accent-cyan)',
+}
+
+function getStatusTextColor(status) {
+  switch (status) {
+    case API_STATUS.ONLINE:
+      return 'var(--green-bright)'
+
+    case API_STATUS.OFFLINE:
+      return 'var(--red-bright)'
+
+    default:
+      return 'var(--yellow-bright)'
+  }
+}
+
 export default function Navbar() {
-  const loc = useLocation()
-  const [open, setOpen] = useState(false)
-  const [apiStatus, setStatus] = useState('checking') // 'online' | 'offline' | 'checking'
+  const location = useLocation()
+
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+
+  const [apiStatus, setApiStatus] = useState(API_STATUS.CHECKING)
 
   useEffect(() => {
-    const check = async () => {
-      try { await healthCheck(); setStatus('online') }
-      catch { setStatus('offline') }
+    const checkApiAvailability = async () => {
+      try {
+        await healthCheck()
+        setApiStatus(API_STATUS.ONLINE)
+      } catch {
+        setApiStatus(API_STATUS.OFFLINE)
+      }
     }
-    check()
-    const id = setInterval(check, 30000)
-    return () => clearInterval(id)
+
+    checkApiAvailability()
+
+    const intervalId = setInterval(
+      checkApiAvailability,
+      30000,
+    )
+
+    return () => clearInterval(intervalId)
   }, [])
 
-  const statusDot = {
-    online:   'bg-green-neo shadow-neon-green',
-    offline:  'bg-red-neo shadow-neon-red',
-    checking: 'bg-yellow-neo animate-pulse',
-  }[apiStatus]
+  const statusIndicatorClass =
+    STATUS_INDICATOR_CLASSES[apiStatus]
 
-  const statusText = { online: 'API ONLINE', offline: 'API OFFLINE', checking: 'CHECKING' }[apiStatus]
+  const statusLabel =
+    STATUS_LABELS[apiStatus]
+
+  const statusTextColor =
+    getStatusTextColor(apiStatus)
 
   return (
-    <nav className="fixed top-0 inset-x-0 z-50" style={{
-      background: 'rgba(2,6,15,0.92)',
-      backdropFilter: 'blur(20px)',
-      borderBottom: '1px solid rgba(0,180,255,0.12)',
-    }}>
-      {/* Top accent line */}
-      <div className="h-px w-full" style={{ background: 'linear-gradient(90deg,transparent,var(--accent-cyan),transparent)' }} />
+    <nav
+      className="fixed inset-x-0 top-0 z-50"
+      style={NAVBAR_STYLES}
+    >
+      <div
+        className="h-px w-full"
+        style={{
+          background:
+            'linear-gradient(90deg,transparent,var(--accent-cyan),transparent)',
+        }}
+      />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+        <Link
+          to="/"
+          onClick={() => setIsMobileMenuOpen(false)}
+          className="group flex items-center gap-3"
+        >
+          <div className="relative flex h-8 w-8 items-center justify-center">
+            <div className="absolute inset-0 rounded-sm border border-cyan/40 transition-colors duration-300 group-hover:border-cyan group-hover:shadow-neon" />
 
-        {/* Logo */}
-        <Link to="/" onClick={() => setOpen(false)} className="flex items-center gap-3 group">
-          <div className="relative w-8 h-8 flex items-center justify-center">
-            <div className="absolute inset-0 rounded-sm border border-cyan/40 group-hover:border-cyan transition-colors duration-300 group-hover:shadow-neon" />
-            <RiShieldKeyholeLine className="text-xl text-cyan group-hover:scale-110 transition-transform duration-300" style={{ filter: 'drop-shadow(0 0 8px var(--accent-cyan))' }} />
+            <RiShieldKeyholeLine
+              className="text-xl text-cyan transition-transform duration-300 group-hover:scale-110"
+              style={{
+                filter:
+                  'drop-shadow(0 0 8px var(--accent-cyan))',
+              }}
+            />
           </div>
-          <div className="hidden sm:flex flex-col leading-none">
-            <span className="font-display text-xs font-bold tracking-[0.3em] text-cyan glow-cyan">CIPHER</span>
-            <span className="font-display text-xs font-bold tracking-[0.3em]" style={{ color: 'var(--text-secondary)' }}>GUARD</span>
+
+          <div className="hidden flex-col leading-none sm:flex">
+            <span className="font-display glow-cyan text-xs font-bold tracking-[0.3em] text-cyan">
+              CIPHER
+            </span>
+
+            <span
+              className="font-display text-xs font-bold tracking-[0.3em]"
+              style={{
+                color: 'var(--text-secondary)',
+              }}
+            >
+              GUARD
+            </span>
           </div>
         </Link>
 
-        {/* Desktop links */}
-        <div className="hidden md:flex items-center gap-1">
-          {LINKS.map(({ to, label, Icon }) => {
-            const active = loc.pathname === to
-            return (
-              <Link key={to} to={to} className={`
-                flex items-center gap-2 px-4 py-2 text-xs font-display tracking-widest
-                transition-all duration-300 relative
-                ${active ? 'text-cyan' : 'text-txt-dim hover:text-txt'}
-              `}>
-                {active && (
-                  <span className="absolute inset-0 rounded" style={{
-                    background: 'rgba(0,180,255,0.07)',
-                    border: '1px solid rgba(0,180,255,0.2)',
-                  }} />
-                )}
-                <Icon className="text-base relative z-10" />
-                <span className="relative z-10">{label}</span>
-                {active && (
-                  <span className="absolute bottom-0 inset-x-4 h-px" style={{ background: 'var(--accent-cyan)', boxShadow: '0 0 8px var(--accent-cyan)' }} />
-                )}
-              </Link>
-            )
-          })}
+        <div className="hidden items-center gap-1 md:flex">
+          {NAVIGATION_ITEMS.map(
+            ({ to, label, Icon }) => {
+              const isActive =
+                location.pathname === to
+
+              return (
+                <Link
+                  key={to}
+                  to={to}
+                  className={`
+                    relative flex items-center gap-2 px-4 py-2
+                    text-xs font-display tracking-widest
+                    transition-all duration-300
+                    ${
+                      isActive
+                        ? 'text-cyan'
+                        : 'text-txt-dim hover:text-txt'
+                    }
+                  `}
+                >
+                  {isActive && (
+                    <span
+                      className="absolute inset-0 rounded"
+                      style={ACTIVE_LINK_STYLES}
+                    />
+                  )}
+
+                  <Icon className="relative z-10 text-base" />
+
+                  <span className="relative z-10">
+                    {label}
+                  </span>
+
+                  {isActive && (
+                    <span
+                      className="absolute bottom-0 inset-x-4 h-px"
+                      style={
+                        ACTIVE_LINK_UNDERLINE_STYLES
+                      }
+                    />
+                  )}
+                </Link>
+              )
+            },
+          )}
         </div>
 
-        {/* Right: status + hamburger */}
         <div className="flex items-center gap-4">
-          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded text-xs font-mono"
-            style={{ background: 'rgba(0,180,255,0.05)', border: '1px solid rgba(0,180,255,0.1)' }}>
-            <span className={`w-1.5 h-1.5 rounded-full pulse-dot ${statusDot}`} />
-            <span style={{ color: apiStatus === 'online' ? 'var(--green-bright)' : apiStatus === 'offline' ? 'var(--red-bright)' : 'var(--yellow-bright)' }}>
-              {statusText}
+          <div
+            className="hidden items-center gap-2 rounded px-3 py-1.5 font-mono text-xs sm:flex"
+            style={STATUS_BADGE_STYLES}
+          >
+            <span
+              className={`pulse-dot h-1.5 w-1.5 rounded-full ${statusIndicatorClass}`}
+            />
+
+            <span style={{ color: statusTextColor }}>
+              {statusLabel}
             </span>
           </div>
 
-          <button onClick={() => setOpen(o => !o)} className="md:hidden text-txt-dim hover:text-cyan transition-colors">
-            {open ? <RiCloseLine className="text-2xl" /> : <RiMenuLine className="text-2xl" />}
+          <button
+            type="button"
+            onClick={() =>
+              setIsMobileMenuOpen(
+                (previous) => !previous,
+              )
+            }
+            className="text-txt-dim transition-colors hover:text-cyan md:hidden"
+            aria-label="Toggle navigation menu"
+          >
+            {isMobileMenuOpen ? (
+              <RiCloseLine className="text-2xl" />
+            ) : (
+              <RiMenuLine className="text-2xl" />
+            )}
           </button>
         </div>
       </div>
 
-      {/* Mobile menu */}
-      {open && (
-        <div style={{ background: 'rgba(2,6,15,0.98)', borderBottom: '1px solid rgba(0,180,255,0.1)' }}
-          className="md:hidden px-4 pb-4 pt-2 space-y-1">
-          {LINKS.map(({ to, label, Icon }) => (
-            <Link key={to} to={to} onClick={() => setOpen(false)}
-              className={`flex items-center gap-3 px-4 py-3 text-xs font-display tracking-widest transition-colors duration-200 rounded
-                ${loc.pathname === to ? 'text-cyan bg-cyan/5 border border-cyan/20' : 'text-txt-dim hover:text-txt'}`}>
-              <Icon className="text-base" />{label}
-            </Link>
-          ))}
-          <div className="flex items-center gap-2 px-4 py-2 text-xs font-mono" style={{ color: 'var(--text-dim)' }}>
-            <span className={`w-1.5 h-1.5 rounded-full ${statusDot}`} />{statusText}
+      {isMobileMenuOpen && (
+        <div
+          className="space-y-1 px-4 pb-4 pt-2 md:hidden"
+          style={MOBILE_MENU_STYLES}
+        >
+          {NAVIGATION_ITEMS.map(
+            ({ to, label, Icon }) => {
+              const isActive =
+                location.pathname === to
+
+              return (
+                <Link
+                  key={to}
+                  to={to}
+                  onClick={() =>
+                    setIsMobileMenuOpen(false)
+                  }
+                  className={`
+                    flex items-center gap-3 rounded px-4 py-3
+                    text-xs font-display tracking-widest
+                    transition-colors duration-200
+                    ${
+                      isActive
+                        ? 'text-cyan bg-cyan/5 border border-cyan/20'
+                        : 'text-txt-dim hover:text-txt'
+                    }
+                  `}
+                >
+                  <Icon className="text-base" />
+                  {label}
+                </Link>
+              )
+            },
+          )}
+
+          <div
+            className="flex items-center gap-2 px-4 py-2 font-mono text-xs"
+            style={{
+              color: 'var(--text-dim)',
+            }}
+          >
+            <span
+              className={`h-1.5 w-1.5 rounded-full ${statusIndicatorClass}`}
+            />
+            {statusLabel}
           </div>
         </div>
       )}

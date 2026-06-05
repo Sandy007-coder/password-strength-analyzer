@@ -1,71 +1,101 @@
-import sqlite3
 import os
+import sqlite3
+
 from config import Config
 from models.password_model import PasswordRecord
 
 
-CREATE_TABLE_SQL = """
+PASSWORD_HISTORY_TABLE_SQL = """
 CREATE TABLE IF NOT EXISTS password_history (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
-    bcrypt_hash TEXT    NOT NULL,           -- bcrypt hash (safe to store)
-    sha256_fp   TEXT    NOT NULL UNIQUE,    -- SHA-256 fingerprint for dedup
-    strength    TEXT    NOT NULL,           -- "Weak" | "Medium" | …
-    score       INTEGER NOT NULL,           -- 0–10
-    entropy     REAL    NOT NULL,           -- bits
-    created_at  TEXT    NOT NULL            -- ISO-8601 UTC timestamp
+    bcrypt_hash TEXT    NOT NULL,
+    sha256_fp   TEXT    NOT NULL UNIQUE,
+    strength    TEXT    NOT NULL,
+    score       INTEGER NOT NULL,
+    entropy     REAL    NOT NULL,
+    created_at  TEXT    NOT NULL
 );
 """
 
 
-def _get_connection() -> sqlite3.Connection:
-   
-    
-    db_path = Config.DATABASE_PATH
-    os.makedirs(os.path.dirname(db_path), exist_ok=True)
+def _create_connection() -> sqlite3.Connection:
+    """
+    Create and configure a SQLite connection.
+    """
+    database_path = Config.DATABASE_PATH
 
-    conn = sqlite3.connect(db_path)
-    conn.row_factory = sqlite3.Row   
-    conn.execute("PRAGMA journal_mode=WAL;")  
-    return conn
+    database_directory = os.path.dirname(database_path)
+    if database_directory:
+        os.makedirs(database_directory, exist_ok=True)
+
+    connection = sqlite3.connect(database_path)
+    connection.row_factory = sqlite3.Row
+
+    # Improves concurrent read/write behavior for SQLite.
+    connection.execute("PRAGMA journal_mode=WAL;")
+
+    return connection
 
 
 def init_db() -> None:
-  
-    with _get_connection() as conn:
-        conn.execute(CREATE_TABLE_SQL)
-        conn.commit()
+    """
+    Initialize required database schema.
+    """
+    with _create_connection() as connection:
+        connection.execute(PASSWORD_HISTORY_TABLE_SQL)
+        connection.commit()
 
 
-#  Reuse detection 
-
-def fingerprint_exists(sha256_fp: str) -> bool:
-
-    with _get_connection() as conn:
-        row = conn.execute(
-            "SELECT id FROM password_history WHERE sha256_fp = ? LIMIT 1",
-            (sha256_fp,),
+def fingerprint_exists(sha256_fingerprint: str) -> bool:
+    """
+    Check whether a password fingerprint already exists.
+    """
+    with _create_connection() as connection:
+        existing_record = connection.execute(
+            """
+            SELECT id
+            FROM password_history
+            WHERE sha256_fp = ?
+            LIMIT 1
+            """,
+            (sha256_fingerprint,),
         ).fetchone()
-    return row is not None
 
+    return existing_record is not None
 
-#  Insert 
 
 def insert_password_record(record: PasswordRecord) -> int:
+    """
+    Store a password record while enforcing the configured history limit.
+    """
+    with _create_connection() as connection:
+        total_records = connection.execute(
+            "SELECT COUNT(*) FROM password_history"
+        ).fetchone()[0]
 
-    with _get_connection() as conn:
-        # Enforce rolling history cap
-        count = conn.execute("SELECT COUNT(*) FROM password_history").fetchone()[0]
-        if count >= Config.MAX_HISTORY:
-            conn.execute(
-                "DELETE FROM password_history WHERE id = ("
-                "  SELECT id FROM password_history ORDER BY created_at ASC LIMIT 1"
-                ")"
+        if total_records >= Config.MAX_HISTORY:
+            connection.execute(
+                """
+                DELETE FROM password_history
+                WHERE id = (
+                    SELECT id
+                    FROM password_history
+                    ORDER BY created_at ASC
+                    LIMIT 1
+                )
+                """
             )
 
-        cursor = conn.execute(
+        cursor = connection.execute(
             """
-            INSERT INTO password_history
-                (bcrypt_hash, sha256_fp, strength, score, entropy, created_at)
+            INSERT INTO password_history (
+                bcrypt_hash,
+                sha256_fp,
+                strength,
+                score,
+                entropy,
+                created_at
+            )
             VALUES (?, ?, ?, ?, ?, ?)
             """,
             (
@@ -77,30 +107,39 @@ def insert_password_record(record: PasswordRecord) -> int:
                 record.created_at,
             ),
         )
-        conn.commit()
-    return cursor.lastrowid
 
+        connection.commit()
 
-#  Fetch 
+        return cursor.lastrowid
+
 
 def fetch_all_records() -> list[dict]:
-  
-    with _get_connection() as conn:
-        rows = conn.execute(
+    """
+    Retrieve password history metadata ordered by creation date.
+    """
+    with _create_connection() as connection:
+        records = connection.execute(
             """
-            SELECT id, strength, score, entropy, created_at
-            FROM   password_history
-            ORDER  BY created_at DESC
+            SELECT
+                id,
+                strength,
+                score,
+                entropy,
+                created_at
+            FROM password_history
+            ORDER BY created_at DESC
             """
         ).fetchall()
-    return [dict(row) for row in rows]
 
+    return [dict(record) for record in records]
 
-#  Delete 
 
 def clear_all_records() -> int:
+    """
+    Remove all stored password history records.
+    """
+    with _create_connection() as connection:
+        result = connection.execute("DELETE FROM password_history")
+        connection.commit()
 
-    with _get_connection() as conn:
-        cursor = conn.execute("DELETE FROM password_history")
-        conn.commit()
-    return cursor.rowcount
+        return result.rowcount

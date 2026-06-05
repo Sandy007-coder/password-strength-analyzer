@@ -1,113 +1,139 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, jsonify, request
 
-from utils.validators          import validate_password_input
-from services.password_checker import analyse_password
-from services.hash_service     import hash_password, sha256_fingerprint
-from services.password_generator import generate_strong_password
-from database.db               import (
+from database.db import (
+    clear_all_records,
+    fetch_all_records,
     fingerprint_exists,
     insert_password_record,
-    fetch_all_records,
-    clear_all_records,
 )
-from models.password_model     import PasswordRecord
+from models.password_model import PasswordRecord
+from services.hash_service import hash_password, sha256_fingerprint
+from services.password_checker import analyse_password
+from services.password_generator import generate_strong_password
+from utils.validators import validate_password_input
 
 
 password_bp = Blueprint("password", __name__)
 
 
-# Helpers
+def build_error_response(message: str, status_code: int = 400) -> tuple:
+    return jsonify(
+        {
+            "success": False,
+            "error": message,
+        }
+    ), status_code
 
-def _error(message: str, status: int = 400) -> tuple:
-    
-    return jsonify({"success": False, "error": message}), status
 
-
-def _ok(data: dict, status: int = 200) -> tuple:
-  
-    return jsonify({"success": True, **data}), status
-
+def build_success_response(
+    payload: dict,
+    status_code: int = 200,
+) -> tuple:
+    return jsonify(
+        {
+            "success": True,
+            **payload,
+        }
+    ), status_code
 
 
 @password_bp.route("/analyze-password", methods=["POST"])
 def analyze_password():
+    request_payload = request.get_json(silent=True)
 
-    data = request.get_json(silent=True)
-    valid, err = validate_password_input(data)
-    if not valid:
-        return _error(err)
+    is_valid, validation_error = validate_password_input(request_payload)
+    if not is_valid:
+        return build_error_response(validation_error)
 
-    password = data["password"]
-    result   = analyse_password(password)
+    password = request_payload["password"]
+    analysis_result = analyse_password(password)
 
-    suggested = None
-    if result["strength"] in ("Weak", "Medium"):
-        suggested = generate_strong_password(length=16)
+    suggested_password = None
+    if analysis_result["strength"] in {"Weak", "Medium"}:
+        suggested_password = generate_strong_password(length=16)
 
-    return _ok({**result, "suggested_password": suggested})
+    return build_success_response(
+        {
+            **analysis_result,
+            "suggested_password": suggested_password,
+        }
+    )
 
 
 @password_bp.route("/save-password", methods=["POST"])
 def save_password():
+    request_payload = request.get_json(silent=True)
 
-    data = request.get_json(silent=True)
-    valid, err = validate_password_input(data)
-    if not valid:
-        return _error(err)
+    is_valid, validation_error = validate_password_input(request_payload)
+    if not is_valid:
+        return build_error_response(validation_error)
 
-    password = data["password"]
+    password = request_payload["password"]
 
-    
-    fp = sha256_fingerprint(password)
-    if fingerprint_exists(fp):
-        return _error(
-            "This password has already been saved. "
-            "Please choose a different password to avoid reuse.",
-            status=409,
+    password_fingerprint = sha256_fingerprint(password)
+
+    if fingerprint_exists(password_fingerprint):
+        return build_error_response(
+            (
+                "This password has already been saved. "
+                "Please choose a different password to avoid reuse."
+            ),
+            status_code=409,
         )
 
-   
-    result = analyse_password(password)
+    analysis_result = analyse_password(password)
+    password_hash = hash_password(password)
 
-    bh = hash_password(password)  
-
-  
-    record = PasswordRecord(
-        bcrypt_hash=bh,
-        sha256_fp=fp,
-        strength=result["strength"],
-        score=result["score"],
-        entropy=result["entropy"],
+    password_record = PasswordRecord(
+        bcrypt_hash=password_hash,
+        sha256_fp=password_fingerprint,
+        strength=analysis_result["strength"],
+        score=analysis_result["score"],
+        entropy=analysis_result["entropy"],
     )
-    new_id = insert_password_record(record)
 
-    return _ok(
+    record_id = insert_password_record(password_record)
+
+    return build_success_response(
         {
-            "message":   "Password saved successfully.",
-            "record_id": new_id,
-            "strength":  result["strength"],
-            "score":     result["score"],
-            "entropy":   result["entropy"],
+            "message": "Password saved successfully.",
+            "record_id": record_id,
+            "strength": analysis_result["strength"],
+            "score": analysis_result["score"],
+            "entropy": analysis_result["entropy"],
         },
-        status=201,
+        status_code=201,
     )
 
 
 @password_bp.route("/password-history", methods=["GET"])
 def password_history():
+    history_records = fetch_all_records()
 
-    records = fetch_all_records()
-    return _ok({"count": len(records), "history": records})
+    return build_success_response(
+        {
+            "count": len(history_records),
+            "history": history_records,
+        }
+    )
 
 
 @password_bp.route("/clear-history", methods=["DELETE"])
 def clear_history():
+    deleted_records = clear_all_records()
 
-    deleted = clear_all_records()
-    return _ok({"message": "History cleared.", "deleted_count": deleted})
+    return build_success_response(
+        {
+            "message": "History cleared.",
+            "deleted_count": deleted_records,
+        }
+    )
 
 
 @password_bp.route("/health", methods=["GET"])
 def health():
-  
-    return _ok({"status": "healthy"})
+    return build_success_response(
+        {
+            "status": "healthy",
+        }
+    )
