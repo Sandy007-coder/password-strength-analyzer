@@ -11,7 +11,7 @@
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white)](https://tailwindcss.com)
 [![SQLite](https://img.shields.io/badge/SQLite-WAL_Mode-003B57?style=flat-square&logo=sqlite&logoColor=white)](https://sqlite.org)
 
-**Final Year Cybersecurity Project · Flask + React · PBKDF2-SHA256 · Shannon Entropy**
+**Cybersecurity Project · Flask + React · PBKDF2-SHA256 · Shannon Entropy**
 
 [Features](#-features) · [Architecture](#-architecture) · [Setup](#-setup) · [API Reference](#-api-reference) · [Security](#-security-design) · [Tech Stack](#-tech-stack)
 
@@ -23,7 +23,7 @@
 
 **CipherGuard** is a full-stack cybersecurity platform that analyses password strength in real time using Shannon entropy calculation, a 10-rule scoring engine, and PBKDF2-HMAC-SHA256 cryptographic hashing. Passwords flagged as weak or medium receive a securely generated replacement suggestion. All saved records are stored as cryptographic hashes — plain text never touches the database.
 
-Built as a Final Year Cybersecurity Engineering project, the platform demonstrates production-grade secure coding practices, REST API design, and a professional security-themed UI.
+Built as a Cybersecurity Engineering project, the platform demonstrates production-grade secure coding practices, REST API design, and a professional security-themed UI.
 
 ---
 
