@@ -521,8 +521,6 @@ npm run dev
 
 <div align="center">
 
-Built with precision for cybersecurity education and portfolio demonstration.
-
-**Password Strength Analyzer** · Powered by CipherGuard · 
+Built with ❤️ for cybersecurity — demonstrating real-time entropy analysis, cryptographic password hashing, and secure history management.
 
 </div>
