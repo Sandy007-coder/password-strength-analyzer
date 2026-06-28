@@ -523,6 +523,6 @@ npm run dev
 
 Built with precision for cybersecurity education and portfolio demonstration.
 
-**Password Strength Analyzer** · Powered by CipherGuard · Final Year Cybersecurity Project
+**Password Strength Analyzer** · Powered by CipherGuard · 
 
 </div>
