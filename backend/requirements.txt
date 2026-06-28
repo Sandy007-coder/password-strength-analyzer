@@ -1,8 +1,8 @@
-# Core Web Framework
+# Web framework
 Flask>=2.3,<4.0
 
-# Environment Configuration
+# Environment configuration
 python-dotenv>=1.0
 
-# Optional: Enable CORS support for browser-based frontends
+# CORS support — enable if serving a browser-based frontend
 # flask-cors>=4.0

@@ -1,28 +1,26 @@
-const LOADER_DOT_CLASSES = ['dot1', 'dot2', 'dot3']
+const _DOT_KEYS = ['dot1', 'dot2', 'dot3']
 
-const OVERLAY_STYLES = {
+const _overlay = {
   background: 'rgba(2,6,15,0.9)',
   backdropFilter: 'blur(8px)',
 }
 
-const SKELETON_CARD_STYLES = {
+const _skeletonCard = {
   background: 'rgba(12,30,56,0.4)',
   border: '1px solid rgba(0,180,255,0.06)',
 }
 
-const SHIELD_ICON_STYLES = {
+const _shieldGlow = {
   filter: 'drop-shadow(0 0 10px var(--accent-cyan))',
 }
 
-export function DotsLoader({
-  color = 'var(--accent-cyan)',
-}) {
+export function DotsLoader({ color = 'var(--accent-cyan)' }) {
   return (
     <span className="inline-flex items-center gap-1">
-      {LOADER_DOT_CLASSES.map((animationClass, index) => (
+      {_DOT_KEYS.map((cls) => (
         <span
-          key={index}
-          className={`h-1.5 w-1.5 rounded-full ${animationClass}`}
+          key={cls}
+          className={`h-1.5 w-1.5 rounded-full ${cls}`}
           style={{ background: color }}
         />
       ))}
@@ -30,63 +28,43 @@ export function DotsLoader({
   )
 }
 
-export function PageLoader({
-  text = 'ANALYSING',
-}) {
+export function PageLoader({ text = 'ANALYSING' }) {
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
-      style={OVERLAY_STYLES}
-    >
+    <div className="fixed inset-0 z-50 flex items-center justify-center" style={_overlay}>
       <div className="flex flex-col items-center gap-6">
+
         <div className="relative flex h-24 w-24 items-center justify-center">
           <div
             className="absolute inset-0 animate-ping rounded-full border border-cyan/20"
             style={{ animationDuration: '1.5s' }}
           />
-
           <div className="spin-slow absolute inset-2 rounded-full border border-cyan/40" />
-
           <div className="absolute inset-4 rounded-full border-2 border-cyan/60" />
-
-          <span
-            className="text-2xl"
-            style={SHIELD_ICON_STYLES}
-          >
-            🛡
-          </span>
+          <span className="text-2xl" style={_shieldGlow}>🛡</span>
         </div>
 
         <div className="font-display glow-cyan flex items-center gap-3 text-xs tracking-[0.3em] text-cyan">
           {text}
           <DotsLoader />
         </div>
+
       </div>
     </div>
   )
 }
 
-export function Skeleton({
-  className = '',
-}) {
-  return (
-    <div className={`skeleton ${className}`} />
-  )
+export function Skeleton({ className = '' }) {
+  return <div className={`skeleton ${className}`} />
 }
 
 export function HistoryCardSkeleton() {
   return (
-    <div
-      className="space-y-3 rounded-lg p-4"
-      style={SKELETON_CARD_STYLES}
-    >
+    <div className="space-y-3 rounded-lg p-4" style={_skeletonCard}>
       <div className="flex items-center justify-between">
         <Skeleton className="h-4 w-20" />
         <Skeleton className="h-4 w-28" />
       </div>
-
       <Skeleton className="h-1.5 w-full" />
-
       <div className="flex gap-6">
         <Skeleton className="h-3 w-16" />
         <Skeleton className="h-3 w-20" />

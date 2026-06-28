@@ -1,11 +1,15 @@
+import logging
 import os
 import sqlite3
+from contextlib import contextmanager
+from typing import Generator
 
 from config import Config
 from models.password_model import PasswordRecord
 
+logger = logging.getLogger(__name__)
 
-PASSWORD_HISTORY_TABLE_SQL = """
+_SCHEMA = """
 CREATE TABLE IF NOT EXISTS password_history (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     bcrypt_hash TEXT    NOT NULL,
@@ -17,85 +21,72 @@ CREATE TABLE IF NOT EXISTS password_history (
 );
 """
 
+_PRAGMA_WAL = "PRAGMA journal_mode=WAL;"
+_PRAGMA_FK  = "PRAGMA foreign_keys=ON;"
 
-def _create_connection() -> sqlite3.Connection:
-    """
-    Create and configure a SQLite connection.
-    """
-    database_path = Config.DATABASE_PATH
 
-    database_directory = os.path.dirname(database_path)
-    if database_directory:
-        os.makedirs(database_directory, exist_ok=True)
+@contextmanager
+def _db() -> Generator[sqlite3.Connection, None, None]:
+    db_path = Config.DATABASE_PATH
+    parent  = os.path.dirname(db_path)
 
-    connection = sqlite3.connect(database_path)
-    connection.row_factory = sqlite3.Row
+    if parent:
+        os.makedirs(parent, exist_ok=True)
 
-    # Improves concurrent read/write behavior for SQLite.
-    connection.execute("PRAGMA journal_mode=WAL;")
+    conn = sqlite3.connect(db_path, check_same_thread=False)
+    conn.row_factory = sqlite3.Row
 
-    return connection
+    try:
+        conn.execute(_PRAGMA_WAL)
+        conn.execute(_PRAGMA_FK)
+        yield conn
+    except sqlite3.Error as exc:
+        conn.rollback()
+        logger.error("Database error: %s", exc, exc_info=True)
+        raise
+    finally:
+        conn.close()
 
 
 def init_db() -> None:
-    """
-    Initialize required database schema.
-    """
-    with _create_connection() as connection:
-        connection.execute(PASSWORD_HISTORY_TABLE_SQL)
-        connection.commit()
+    with _db() as conn:
+        conn.execute(_SCHEMA)
+        conn.commit()
+    logger.info("Database initialised at %s", Config.DATABASE_PATH)
 
 
-def fingerprint_exists(sha256_fingerprint: str) -> bool:
-    """
-    Check whether a password fingerprint already exists.
-    """
-    with _create_connection() as connection:
-        existing_record = connection.execute(
-            """
-            SELECT id
-            FROM password_history
-            WHERE sha256_fp = ?
-            LIMIT 1
-            """,
-            (sha256_fingerprint,),
+def fingerprint_exists(sha256_fp: str) -> bool:
+    with _db() as conn:
+        row = conn.execute(
+            "SELECT 1 FROM password_history WHERE sha256_fp = ? LIMIT 1",
+            (sha256_fp,),
         ).fetchone()
-
-    return existing_record is not None
+    return row is not None
 
 
 def insert_password_record(record: PasswordRecord) -> int:
-    """
-    Store a password record while enforcing the configured history limit.
-    """
-    with _create_connection() as connection:
-        total_records = connection.execute(
+    with _db() as conn:
+        count = conn.execute(
             "SELECT COUNT(*) FROM password_history"
         ).fetchone()[0]
 
-        if total_records >= Config.MAX_HISTORY:
-            connection.execute(
+        if count >= Config.MAX_HISTORY:
+            conn.execute(
                 """
                 DELETE FROM password_history
                 WHERE id = (
-                    SELECT id
-                    FROM password_history
+                    SELECT id FROM password_history
                     ORDER BY created_at ASC
                     LIMIT 1
                 )
                 """
             )
+            logger.debug("History cap (%d) reached — evicted oldest record.", Config.MAX_HISTORY)
 
-        cursor = connection.execute(
+        cursor = conn.execute(
             """
-            INSERT INTO password_history (
-                bcrypt_hash,
-                sha256_fp,
-                strength,
-                score,
-                entropy,
-                created_at
-            )
+            INSERT INTO password_history
+                (bcrypt_hash, sha256_fp, strength, score, entropy, created_at)
             VALUES (?, ?, ?, ?, ?, ?)
             """,
             (
@@ -107,39 +98,28 @@ def insert_password_record(record: PasswordRecord) -> int:
                 record.created_at,
             ),
         )
+        conn.commit()
 
-        connection.commit()
-
-        return cursor.lastrowid
+    logger.debug("Inserted password record id=%d", cursor.lastrowid)
+    return cursor.lastrowid
 
 
 def fetch_all_records() -> list[dict]:
-    """
-    Retrieve password history metadata ordered by creation date.
-    """
-    with _create_connection() as connection:
-        records = connection.execute(
+    with _db() as conn:
+        rows = conn.execute(
             """
-            SELECT
-                id,
-                strength,
-                score,
-                entropy,
-                created_at
-            FROM password_history
-            ORDER BY created_at DESC
+            SELECT id, strength, score, entropy, created_at
+            FROM   password_history
+            ORDER  BY created_at DESC
             """
         ).fetchall()
-
-    return [dict(record) for record in records]
+    return [dict(r) for r in rows]
 
 
 def clear_all_records() -> int:
-    """
-    Remove all stored password history records.
-    """
-    with _create_connection() as connection:
-        result = connection.execute("DELETE FROM password_history")
-        connection.commit()
+    with _db() as conn:
+        result = conn.execute("DELETE FROM password_history")
+        conn.commit()
 
-        return result.rowcount
+    logger.info("Cleared %d password history record(s).", result.rowcount)
+    return result.rowcount

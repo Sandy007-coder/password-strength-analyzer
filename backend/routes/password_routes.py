@@ -1,3 +1,5 @@
+import logging
+
 from flask import Blueprint, jsonify, request
 
 from database.db import (
@@ -12,128 +14,97 @@ from services.password_checker import analyse_password
 from services.password_generator import generate_strong_password
 from utils.validators import validate_password_input
 
+logger = logging.getLogger(__name__)
 
 password_bp = Blueprint("password", __name__)
 
-
-def build_error_response(message: str, status_code: int = 400) -> tuple:
-    return jsonify(
-        {
-            "success": False,
-            "error": message,
-        }
-    ), status_code
+_WEAK_STRENGTHS = {"Weak", "Medium"}
 
 
-def build_success_response(
-    payload: dict,
-    status_code: int = 200,
-) -> tuple:
-    return jsonify(
-        {
-            "success": True,
-            **payload,
-        }
-    ), status_code
+def _error(message: str, status: int = 400):
+    return jsonify({"success": False, "error": message}), status
+
+
+def _ok(payload: dict, status: int = 200):
+    return jsonify({"success": True, **payload}), status
 
 
 @password_bp.route("/analyze-password", methods=["POST"])
 def analyze_password():
-    request_payload = request.get_json(silent=True)
+    body = request.get_json(silent=True)
 
-    is_valid, validation_error = validate_password_input(request_payload)
-    if not is_valid:
-        return build_error_response(validation_error)
+    ok, err = validate_password_input(body)
+    if not ok:
+        return _error(err)
 
-    password = request_payload["password"]
-    analysis_result = analyse_password(password)
+    password = body["password"]
+    analysis  = analyse_password(password)
 
-    suggested_password = None
-    if analysis_result["strength"] in {"Weak", "Medium"}:
-        suggested_password = generate_strong_password(length=16)
-
-    return build_success_response(
-        {
-            **analysis_result,
-            "suggested_password": suggested_password,
-        }
+    suggestion = (
+        generate_strong_password(length=16)
+        if analysis["strength"] in _WEAK_STRENGTHS
+        else None
     )
+
+    logger.info("Password analysed — strength=%s score=%d", analysis["strength"], analysis["score"])
+
+    return _ok({**analysis, "suggested_password": suggestion})
 
 
 @password_bp.route("/save-password", methods=["POST"])
 def save_password():
-    request_payload = request.get_json(silent=True)
+    body = request.get_json(silent=True)
 
-    is_valid, validation_error = validate_password_input(request_payload)
-    if not is_valid:
-        return build_error_response(validation_error)
+    ok, err = validate_password_input(body)
+    if not ok:
+        return _error(err)
 
-    password = request_payload["password"]
+    password    = body["password"]
+    fingerprint = sha256_fingerprint(password)
 
-    password_fingerprint = sha256_fingerprint(password)
-
-    if fingerprint_exists(password_fingerprint):
-        return build_error_response(
-            (
-                "This password has already been saved. "
-                "Please choose a different password to avoid reuse."
-            ),
-            status_code=409,
+    if fingerprint_exists(fingerprint):
+        return _error(
+            "This password has already been saved. Choose a different password to avoid reuse.",
+            status=409,
         )
 
-    analysis_result = analyse_password(password)
-    password_hash = hash_password(password)
-
-    password_record = PasswordRecord(
-        bcrypt_hash=password_hash,
-        sha256_fp=password_fingerprint,
-        strength=analysis_result["strength"],
-        score=analysis_result["score"],
-        entropy=analysis_result["entropy"],
+    analysis = analyse_password(password)
+    record   = PasswordRecord(
+        bcrypt_hash=hash_password(password),
+        sha256_fp=fingerprint,
+        strength=analysis["strength"],
+        score=analysis["score"],
+        entropy=analysis["entropy"],
     )
 
-    record_id = insert_password_record(password_record)
+    record_id = insert_password_record(record)
+    logger.info("Password record saved — id=%d strength=%s", record_id, record.strength)
 
-    return build_success_response(
+    return _ok(
         {
-            "message": "Password saved successfully.",
+            "message":   "Password saved successfully.",
             "record_id": record_id,
-            "strength": analysis_result["strength"],
-            "score": analysis_result["score"],
-            "entropy": analysis_result["entropy"],
+            "strength":  analysis["strength"],
+            "score":     analysis["score"],
+            "entropy":   analysis["entropy"],
         },
-        status_code=201,
+        status=201,
     )
 
 
 @password_bp.route("/password-history", methods=["GET"])
 def password_history():
-    history_records = fetch_all_records()
-
-    return build_success_response(
-        {
-            "count": len(history_records),
-            "history": history_records,
-        }
-    )
+    records = fetch_all_records()
+    return _ok({"count": len(records), "history": records})
 
 
 @password_bp.route("/clear-history", methods=["DELETE"])
 def clear_history():
-    deleted_records = clear_all_records()
-
-    return build_success_response(
-        {
-            "message": "History cleared.",
-            "deleted_count": deleted_records,
-        }
-    )
+    deleted = clear_all_records()
+    logger.info("Password history cleared — %d record(s) removed.", deleted)
+    return _ok({"message": "History cleared.", "deleted_count": deleted})
 
 
 @password_bp.route("/health", methods=["GET"])
 def health():
-    return build_success_response(
-        {
-            "status": "healthy",
-        }
-    )
+    return _ok({"status": "healthy"})

@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 60" fill="none">
+  <defs>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="2" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <linearGradient id="shieldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%"   stop-color="#33ccff"/>
+      <stop offset="100%" stop-color="#00b4ff"/>
+    </linearGradient>
+    <linearGradient id="textGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%"   stop-color="#33ccff"/>
+      <stop offset="100%" stop-color="#00b4ff"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Shield icon -->
+  <g filter="url(#glow)">
+    <path
+      d="M30 8 L48 14 L48 28 C48 38 40 46 30 50 C20 46 12 38 12 28 L12 14 Z"
+      fill="none"
+      stroke="url(#shieldGrad)"
+      stroke-width="1.5"
+      opacity="0.9"
+    />
+    <!-- Inner shield detail -->
+    <path
+      d="M30 13 L43 18 L43 29 C43 36 37 42 30 45 C23 42 17 36 17 29 L17 18 Z"
+      fill="rgba(0,180,255,0.06)"
+      stroke="rgba(0,180,255,0.3)"
+      stroke-width="0.75"
+    />
+    <!-- Keyhole top circle -->
+    <circle cx="30" cy="27" r="4" fill="none" stroke="url(#shieldGrad)" stroke-width="1.5"/>
+    <!-- Keyhole stem -->
+    <rect x="28.5" y="29" width="3" height="5" rx="1" fill="url(#shieldGrad)"/>
+    <!-- Corner brackets on shield -->
+    <line x1="12" y1="14" x2="16" y2="14" stroke="#00b4ff" stroke-width="1" opacity="0.4"/>
+    <line x1="12" y1="14" x2="12" y2="18" stroke="#00b4ff" stroke-width="1" opacity="0.4"/>
+    <line x1="48" y1="14" x2="44" y2="14" stroke="#00b4ff" stroke-width="1" opacity="0.4"/>
+    <line x1="48" y1="14" x2="48" y2="18" stroke="#00b4ff" stroke-width="1" opacity="0.4"/>
+  </g>
+
+  <!-- CIPHER text -->
+  <text
+    x="58"
+    y="28"
+    font-family="'Orbitron', monospace"
+    font-size="14"
+    font-weight="700"
+    letter-spacing="3"
+    fill="url(#textGrad)"
+    filter="url(#glow)"
+  >
+    CIPHER
+  </text>
+
+  <!-- GUARD text -->
+  <text
+    x="58"
+    y="44"
+    font-family="'Orbitron', monospace"
+    font-size="14"
+    font-weight="700"
+    letter-spacing="3"
+    fill="rgba(90,138,170,0.9)"
+  >
+    GUARD
+  </text>
+
+  <!-- Decorative scan line -->
+  <line x1="58" y1="32" x2="178" y2="32" stroke="rgba(0,180,255,0.12)" stroke-width="0.5"/>
+</svg>

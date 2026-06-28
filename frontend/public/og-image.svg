@@ -1,0 +1,205 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" fill="none">
+  <defs>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="softGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%"   stop-color="#02060f"/>
+      <stop offset="50%"  stop-color="#050e1f"/>
+      <stop offset="100%" stop-color="#02060f"/>
+    </linearGradient>
+    <linearGradient id="cyanGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%"   stop-color="#33ccff"/>
+      <stop offset="100%" stop-color="#00b4ff"/>
+    </linearGradient>
+    <linearGradient id="accentLine" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%"   stop-color="transparent"/>
+      <stop offset="50%"  stop-color="#00b4ff"/>
+      <stop offset="100%" stop-color="transparent"/>
+    </linearGradient>
+    <radialGradient id="centerGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="rgba(0,180,255,0.12)"/>
+      <stop offset="100%" stop-color="rgba(0,180,255,0)"/>
+    </radialGradient>
+    <radialGradient id="shieldInner" cx="50%" cy="40%" r="60%">
+      <stop offset="0%"   stop-color="rgba(0,180,255,0.18)"/>
+      <stop offset="100%" stop-color="rgba(2,6,15,0.95)"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bgGrad)"/>
+
+  <!-- Grid pattern -->
+  <g opacity="0.06" stroke="#00b4ff" stroke-width="0.75">
+    <!-- Vertical lines -->
+    <line x1="60"   y1="0" x2="60"   y2="630"/>
+    <line x1="120"  y1="0" x2="120"  y2="630"/>
+    <line x1="180"  y1="0" x2="180"  y2="630"/>
+    <line x1="240"  y1="0" x2="240"  y2="630"/>
+    <line x1="300"  y1="0" x2="300"  y2="630"/>
+    <line x1="360"  y1="0" x2="360"  y2="630"/>
+    <line x1="420"  y1="0" x2="420"  y2="630"/>
+    <line x1="480"  y1="0" x2="480"  y2="630"/>
+    <line x1="540"  y1="0" x2="540"  y2="630"/>
+    <line x1="600"  y1="0" x2="600"  y2="630"/>
+    <line x1="660"  y1="0" x2="660"  y2="630"/>
+    <line x1="720"  y1="0" x2="720"  y2="630"/>
+    <line x1="780"  y1="0" x2="780"  y2="630"/>
+    <line x1="840"  y1="0" x2="840"  y2="630"/>
+    <line x1="900"  y1="0" x2="900"  y2="630"/>
+    <line x1="960"  y1="0" x2="960"  y2="630"/>
+    <line x1="1020" y1="0" x2="1020" y2="630"/>
+    <line x1="1080" y1="0" x2="1080" y2="630"/>
+    <line x1="1140" y1="0" x2="1140" y2="630"/>
+    <!-- Horizontal lines -->
+    <line x1="0" y1="60"  x2="1200" y2="60"/>
+    <line x1="0" y1="120" x2="1200" y2="120"/>
+    <line x1="0" y1="180" x2="1200" y2="180"/>
+    <line x1="0" y1="240" x2="1200" y2="240"/>
+    <line x1="0" y1="300" x2="1200" y2="300"/>
+    <line x1="0" y1="360" x2="1200" y2="360"/>
+    <line x1="0" y1="420" x2="1200" y2="420"/>
+    <line x1="0" y1="480" x2="1200" y2="480"/>
+    <line x1="0" y1="540" x2="1200" y2="540"/>
+  </g>
+
+  <!-- Center radial glow -->
+  <ellipse cx="600" cy="315" rx="420" ry="280" fill="url(#centerGlow)"/>
+
+  <!-- Top accent line -->
+  <rect x="0" y="0" width="1200" height="2" fill="url(#accentLine)"/>
+  <!-- Bottom accent line -->
+  <rect x="0" y="628" width="1200" height="2" fill="url(#accentLine)"/>
+
+  <!-- Left border accent -->
+  <rect x="0" y="0" width="2" height="630" fill="rgba(0,180,255,0.3)"/>
+  <!-- Right border accent -->
+  <rect x="1198" y="0" width="2" height="630" fill="rgba(0,180,255,0.3)"/>
+
+  <!-- Corner brackets — top left -->
+  <line x1="24" y1="24" x2="60" y2="24" stroke="#00b4ff" stroke-width="2" opacity="0.6"/>
+  <line x1="24" y1="24" x2="24" y2="60" stroke="#00b4ff" stroke-width="2" opacity="0.6"/>
+  <!-- Corner brackets — top right -->
+  <line x1="1176" y1="24" x2="1140" y2="24" stroke="#00b4ff" stroke-width="2" opacity="0.6"/>
+  <line x1="1176" y1="24" x2="1176" y2="60" stroke="#00b4ff" stroke-width="2" opacity="0.6"/>
+  <!-- Corner brackets — bottom left -->
+  <line x1="24" y1="606" x2="60"   y2="606" stroke="#00b4ff" stroke-width="2" opacity="0.6"/>
+  <line x1="24" y1="606" x2="24"   y2="570" stroke="#00b4ff" stroke-width="2" opacity="0.6"/>
+  <!-- Corner brackets — bottom right -->
+  <line x1="1176" y1="606" x2="1140" y2="606" stroke="#00b4ff" stroke-width="2" opacity="0.6"/>
+  <line x1="1176" y1="606" x2="1176" y2="570" stroke="#00b4ff" stroke-width="2" opacity="0.6"/>
+
+  <!-- Shield icon -->
+  <g transform="translate(156, 195)" filter="url(#softGlow)">
+    <path
+      d="M120 0 L210 38 L210 128 C210 173 168 208 120 225 C72 208 30 173 30 128 L30 38 Z"
+      fill="url(#shieldInner)"
+      stroke="url(#cyanGrad)"
+      stroke-width="2.5"
+      stroke-linejoin="round"
+    />
+    <path
+      d="M120 20 L196 54 L196 128 C196 164 160 196 120 210 C80 196 44 164 44 128 L44 54 Z"
+      fill="none"
+      stroke="rgba(0,180,255,0.2)"
+      stroke-width="1.25"
+      stroke-linejoin="round"
+    />
+    <!-- Keyhole circle -->
+    <circle cx="120" cy="108" r="28" fill="none" stroke="url(#cyanGrad)" stroke-width="2.5"/>
+    <!-- Keyhole stem -->
+    <rect x="108" y="130" width="24" height="36" rx="8" fill="url(#cyanGrad)" opacity="0.9"/>
+    <!-- Inner dot -->
+    <circle cx="120" cy="108" r="10" fill="rgba(0,180,255,0.25)"/>
+  </g>
+
+  <!-- CIPHERGUARD title -->
+  <text
+    x="420" y="260"
+    font-family="'Orbitron', monospace"
+    font-size="72"
+    font-weight="900"
+    letter-spacing="8"
+    fill="url(#cyanGrad)"
+    filter="url(#glow)"
+  >
+    CIPHER
+  </text>
+  <text
+    x="420" y="340"
+    font-family="'Orbitron', monospace"
+    font-size="72"
+    font-weight="900"
+    letter-spacing="8"
+    fill="rgba(90,138,170,0.85)"
+  >
+    GUARD
+  </text>
+
+  <!-- Divider line -->
+  <line x1="420" y1="362" x2="1140" y2="362" stroke="rgba(0,180,255,0.15)" stroke-width="1"/>
+
+  <!-- Subtitle -->
+  <text
+    x="420" y="400"
+    font-family="'Orbitron', monospace"
+    font-size="18"
+    font-weight="400"
+    letter-spacing="4"
+    fill="rgba(90,138,170,0.7)"
+  >
+    PASSWORD STRENGTH ANALYZER
+  </text>
+
+  <!-- Feature tags -->
+  <!-- Tag 1 -->
+  <rect x="420" y="440" width="190" height="34" rx="4"
+    fill="rgba(0,180,255,0.06)" stroke="rgba(0,180,255,0.25)" stroke-width="1"/>
+  <text x="515" y="462" text-anchor="middle"
+    font-family="'JetBrains Mono', monospace" font-size="12" letter-spacing="2"
+    fill="#00b4ff">
+    ENTROPY ANALYSIS
+  </text>
+
+  <!-- Tag 2 -->
+  <rect x="626" y="440" width="190" height="34" rx="4"
+    fill="rgba(0,180,255,0.06)" stroke="rgba(0,180,255,0.25)" stroke-width="1"/>
+  <text x="721" y="462" text-anchor="middle"
+    font-family="'JetBrains Mono', monospace" font-size="12" letter-spacing="2"
+    fill="#00b4ff">
+    PBKDF2-SHA256
+  </text>
+
+  <!-- Tag 3 -->
+  <rect x="832" y="440" width="190" height="34" rx="4"
+    fill="rgba(0,180,255,0.06)" stroke="rgba(0,180,255,0.25)" stroke-width="1"/>
+  <text x="927" y="462" text-anchor="middle"
+    font-family="'JetBrains Mono', monospace" font-size="12" letter-spacing="2"
+    fill="#00b4ff">
+    BREACH DETECTION
+  </text>
+
+  <!-- Bottom label -->
+  <text
+    x="600" y="580"
+    text-anchor="middle"
+    font-family="'JetBrains Mono', monospace"
+    font-size="13"
+    letter-spacing="3"
+    fill="rgba(45,90,122,0.8)"
+  >
+    FINAL YEAR CYBERSECURITY PROJECT  ·  BUILT WITH FLASK + REACT
+  </text>
+</svg>

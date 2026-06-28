@@ -1,81 +1,46 @@
 import hashlib
 import hmac
+import logging
 import os
 
 from config import Config
 
+logger = logging.getLogger(__name__)
 
-PBKDF2_BASE_ITERATIONS = 50_000
-PBKDF2_ITERATIONS = PBKDF2_BASE_ITERATIONS * Config.BCRYPT_ROUNDS
-PBKDF2_ALGORITHM = "sha256"
-SALT_SIZE_BYTES = 32
-DERIVED_KEY_SIZE_BYTES = 32
-
-
-def hash_password(plain_text: str) -> str:
-    """
-    Generate a PBKDF2-SHA256 password hash.
-
-    Format:
-        pbkdf2$<iterations>$<salt_hex>$<derived_key_hex>
-    """
-    password_bytes = plain_text.encode("utf-8")
-    salt = os.urandom(SALT_SIZE_BYTES)
-
-    derived_key = hashlib.pbkdf2_hmac(
-        hash_name=PBKDF2_ALGORITHM,
-        password=password_bytes,
-        salt=salt,
-        iterations=PBKDF2_ITERATIONS,
-        dklen=DERIVED_KEY_SIZE_BYTES,
-    )
-
-    return (
-        f"pbkdf2$"
-        f"{PBKDF2_ITERATIONS}$"
-        f"{salt.hex()}$"
-        f"{derived_key.hex()}"
-    )
+_ALGORITHM       = "sha256"
+_ITERATIONS      = 50_000 * Config.BCRYPT_ROUNDS
+_SALT_BYTES      = 32
+_DK_BYTES        = 32
+_HASH_PREFIX     = "pbkdf2"
 
 
-def verify_password(plain_text: str, stored_hash: str) -> bool:
-    """
-    Verify a plaintext password against a stored PBKDF2 hash.
-    """
+def hash_password(plaintext: str) -> str:
+    salt = os.urandom(_SALT_BYTES)
+    dk   = hashlib.pbkdf2_hmac(_ALGORITHM, plaintext.encode(), salt, _ITERATIONS, _DK_BYTES)
+    return f"{_HASH_PREFIX}${_ITERATIONS}${salt.hex()}${dk.hex()}"
+
+
+def verify_password(plaintext: str, stored: str) -> bool:
     try:
-        algorithm, iterations_value, salt_hex, derived_key_hex = (
-            stored_hash.split("$")
-        )
-
-        iterations = int(iterations_value)
-        salt = bytes.fromhex(salt_hex)
-        expected_derived_key = bytes.fromhex(derived_key_hex)
-
-        if algorithm != "pbkdf2":
+        prefix, iter_str, salt_hex, dk_hex = stored.split("$")
+        if prefix != _HASH_PREFIX:
             return False
-
+        iterations = int(iter_str)
+        salt       = bytes.fromhex(salt_hex)
+        expected   = bytes.fromhex(dk_hex)
     except (ValueError, AttributeError):
+        logger.warning("Malformed hash presented for verification.")
         return False
 
-    candidate_derived_key = hashlib.pbkdf2_hmac(
-        hash_name=PBKDF2_ALGORITHM,
-        password=plain_text.encode("utf-8"),
-        salt=salt,
-        iterations=iterations,
-        dklen=len(expected_derived_key),
+    candidate = hashlib.pbkdf2_hmac(
+        _ALGORITHM,
+        plaintext.encode(),
+        salt,
+        iterations,
+        len(expected),
     )
-
-    return hmac.compare_digest(
-        candidate_derived_key,
-        expected_derived_key,
-    )
+    return hmac.compare_digest(candidate, expected)
 
 
-def sha256_fingerprint(plain_text: str) -> str:
-    """
-    Generate a deterministic SHA-256 fingerprint used for
-    password reuse detection.
-    """
-    return hashlib.sha256(
-        plain_text.encode("utf-8")
-    ).hexdigest()
+def sha256_fingerprint(plaintext: str) -> str:
+    return hashlib.sha256(plaintext.encode()).hexdigest()

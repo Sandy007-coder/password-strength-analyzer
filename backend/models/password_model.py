@@ -1,32 +1,22 @@
-from dataclasses import dataclass
-from datetime import datetime
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
 
 
 @dataclass(slots=True)
 class PasswordRecord:
     bcrypt_hash: str
-    sha256_fp: str
-    strength: str
-    score: int
-    entropy: float
-    created_at: str = ""
-    id: int | None = None
-
-    def __post_init__(self) -> None:
-        if not self.created_at:
-            self.created_at = f"{datetime.utcnow().isoformat()}Z"
+    sha256_fp:   str
+    strength:    str
+    score:       int
+    entropy:     float
+    id:          int | None = None
+    created_at:  str = field(default_factory=lambda: datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"))
 
     def to_dict(self) -> dict:
-        """
-        Return a sanitized representation suitable for API responses.
-
-        Sensitive values such as password hashes and fingerprints are
-        intentionally excluded from the returned payload.
-        """
         return {
-            "id": self.id,
-            "strength": self.strength,
-            "score": self.score,
-            "entropy": self.entropy,
+            "id":         self.id,
+            "strength":   self.strength,
+            "score":      self.score,
+            "entropy":    round(self.entropy, 4),
             "created_at": self.created_at,
         }
