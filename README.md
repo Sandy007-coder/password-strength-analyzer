@@ -496,12 +496,12 @@ npm run dev
 **Sarveswaran S**
 
 - B.Tech — Computer Science & Engineering (Cybersecurity)
-- 🔐 Cybersecurity, Python & Full-Stack Development Enthusiast
-- 🎯 Interested in Penetration Testing, Cryptography, and Secure System Design
+- 🔐 Cybersecurity, Python, Full-Stack Development & Data Analytics Enthusiast
+- 🎯 Interested in Penetration Testing, Red Teaming, and Data Analysis
 
 🔗 GitHub: https://github.com/Sandy007-coder
 
-🔗 LinkedIn: https://www.linkedin.com/in/sarveswaran-cybersec
+🔗 LinkedIn: https://www.linkedin.com/in/sarveswaran-cybersec?utm_source=share_via&utm_content=profile&utm_medium=member_android
 
 ---
 
